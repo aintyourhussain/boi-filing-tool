@@ -5,41 +5,114 @@ from io import BytesIO
 from datetime import datetime, timedelta
 import hashlib
 import os
-aurora_css = """
+# ------------------------------
+# LIGHT THEME (Raptor-style)
+# ------------------------------
+LIGHT_THEME_CSS = """
 <style>
-
-/* App background */
+/* Background */
 [data-testid="stAppViewContainer"] {
-    background: radial-gradient(circle at top left, #020617 0%, #020617 40%, #020617 60%, #020617 100%);
-    background-color: #020617;
-    color: #e5e7eb;
+    background: linear-gradient(135deg, #02c9b9 0%, #25c6ff 40%, #ffffff 100%);
+    color: #0f172a;
 }
 
-/* Soft gradient band behind content (subtle) */
-section.main {
-    padding-top: 10px;
-}
-
-/* Header transparent */
+/* Header */
 [data-testid="stHeader"] {
-    background: rgba(2, 6, 23, 0.9);
+    background: rgba(255,255,255,0.0);
 }
 
 /* Sidebar */
 [data-testid="stSidebar"] {
+    background: #ffffff;
+    border-right: 1px solid #e5e7eb;
+}
+
+/* Tabs */
+.stTabs [data-baseweb="tab-list"] { gap: 0.35rem; }
+.stTabs [data-baseweb="tab"] {
+    background: rgba(255,255,255,0.7);
+    color: #64748b;
+    border-radius: 12px 12px 0 0;
+    border: 1px solid #e5e7eb;
+    padding: 8px 22px;
+    font-weight: 600;
+}
+.stTabs [aria-selected="true"] {
+    background: linear-gradient(135deg, #6366f1, #ec4899) !important;
+    color: #ffffff !important;
+    border: none !important;
+}
+
+/* Cards */
+section.main > div {
+    background: #ffffff;
+    border-radius: 18px;
+    padding: 22px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 14px 40px rgba(15, 23, 42, 0.08);
+}
+
+/* Buttons */
+.stButton button {
+    background: #0ea5e9;
+    color: #ffffff;
+    border-radius: 999px;
+    padding: 0.45rem 1.6rem;
+    border: none;
+    font-weight: 600;
+}
+.stButton button:hover {
+    background: #0284c7;
+}
+
+/* Inputs */
+input, textarea, select {
+    background: #f9fafb !important;
+    color: #0f172a !important;
+    border-radius: 8px !important;
+    border: 1px solid #e5e7eb !important;
+}
+
+/* File uploader */
+.stFileUploader > label > div {
+    background: #f9fafb !important;
+    border-radius: 12px;
+    border: 1px dashed #cbd5f5;
+}
+
+/* Metrics */
+[data-testid="stMetricValue"] { color: #0f172a; }
+[data-testid="stMetricLabel"] { color: #6b7280; }
+
+/* Footer */
+.footer-text {
+    position: fixed;
+    right: 18px;
+    bottom: 8px;
+    color: #64748b;
+    font-size: 13px;
+    font-family: "Segoe UI", system-ui, sans-serif;
+}
+</style>
+"""
+
+# ------------------------------
+# DARK THEME (Clean Slate)
+# ------------------------------
+DARK_THEME_CSS = """
+<style>
+[data-testid="stAppViewContainer"] {
+    background: radial-gradient(circle at top left, #020617 0%, #020617 50%, #020617 100%);
+    color: #e5e7eb;
+}
+[data-testid="stHeader"] { background: rgba(2,6,23,0.9); }
+[data-testid="stSidebar"] {
     background: #020617;
-    border-right: 1px solid rgba(148, 163, 184, 0.2);
+    border-right: 1px solid rgba(148,163,184,0.25);
 }
 
-/* Typography */
-h1, h2, h3, h4 {
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-}
-
-/* Tabs (top toolbar) */
-.stTabs [data-baseweb="tab-list"] {
-    gap: 0.4rem;
-}
+/* Tabs */
+.stTabs [data-baseweb="tab-list"] { gap: 0.4rem; }
 .stTabs [data-baseweb="tab"] {
     background: #020617;
     color: #9ca3af;
@@ -47,26 +120,20 @@ h1, h2, h3, h4 {
     border: 1px solid #1f2937;
     padding: 8px 22px;
     font-weight: 500;
-    transition: 0.18s ease;
-}
-.stTabs [data-baseweb="tab"]:hover {
-    color: #22d3ee;
-    border-color: #22d3ee;
 }
 .stTabs [aria-selected="true"] {
     background: linear-gradient(135deg, #22c1c3, #6366f1) !important;
     color: #f9fafb !important;
     border: none !important;
-    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.9);
 }
 
-/* Main "card" containers */
+/* Cards */
 section.main > div {
-    background: radial-gradient(circle at top left, rgba(148,163,184,0.08), rgba(15,23,42,0.96));
+    background: radial-gradient(circle at top left, rgba(148,163,184,0.16), rgba(15,23,42,0.98));
     border-radius: 16px;
     padding: 22px;
-    border: 1px solid rgba(148, 163, 184, 0.18);
-    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.95);
+    border: 1px solid rgba(148,163,184,0.25);
+    box-shadow: 0 18px 40px rgba(15,23,42,0.95);
 }
 
 /* Buttons */
@@ -77,15 +144,13 @@ section.main > div {
     border-radius: 999px;
     padding: 0.45rem 1.7rem;
     border: none;
-    letter-spacing: 0.03em;
-    transition: 0.18s ease;
 }
 .stButton button:hover {
-    filter: brightness(1.05);
-    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.45);
+    filter: brightness(1.06);
+    box-shadow: 0 8px 20px rgba(37,99,235,0.55);
 }
 
-/* Inputs & select boxes */
+/* Inputs */
 input, textarea, select {
     background-color: #020617 !important;
     color: #e5e7eb !important;
@@ -98,23 +163,18 @@ input, textarea, select {
     background-color: #020617 !important;
 }
 
-/* File uploader box */
+/* File uploader */
 .stFileUploader > label > div {
     background-color: #020617 !important;
     border-radius: 10px;
-    border: 1px dashed rgba(148, 163, 184, 0.7);
+    border: 1px dashed rgba(148,163,184,0.7);
 }
 
 /* Metrics */
-[data-testid="stMetricValue"] {
-    color: #e5e7eb;
-    font-weight: 700;
-}
-[data-testid="stMetricLabel"] {
-    color: #9ca3af;
-}
+[data-testid="stMetricValue"] { color: #e5e7eb; }
+[data-testid="stMetricLabel"] { color: #9ca3af; }
 
-/* Dataframe table */
+/* Table */
 [data-testid="stTable"] {
     background-color: #020617;
     color: #e5e7eb;
@@ -129,12 +189,27 @@ input, textarea, select {
     color: #9ca3af;
     font-size: 13px;
     font-family: "Segoe UI", system-ui, sans-serif;
-    opacity: 0.9;
 }
-
 </style>
 """
-st.markdown(aurora_css, unsafe_allow_html=True)
+
+def apply_theme():
+    if st.session_state["theme"] == "Light":
+        st.markdown(LIGHT_THEME_CSS, unsafe_allow_html=True)
+    else:
+        st.markdown(DARK_THEME_CSS, unsafe_allow_html=True)
+apply_theme()
+st.sidebar.markdown(f"**Logged in as:** {st.session_state['user']}")
+
+theme_choice = st.sidebar.radio(
+    "Theme",
+    ["Light", "Dark"],
+    index=0 if st.session_state["theme"] == "Light" else 1,
+)
+
+# update theme in session state
+st.session_state["theme"] = theme_choice
+
 
 st.title("📄 BOI Filing Multi-State Processor")
 
@@ -738,13 +813,7 @@ with tab_process:
 
 with tab_combine:
     combiner_page()
-
-# -------------------------------------------------
-# FOOTER
-# -------------------------------------------------
-footer_html = """
-<div class="footer-text">
-    Created by Hussain — the pro coder
-</div>
-"""
-st.markdown(footer_html, unsafe_allow_html=True)
+st.markdown(
+    '<div class="footer-text">Created by Hussain — the pro coder</div>',
+    unsafe_allow_html=True
+)
