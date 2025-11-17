@@ -5,128 +5,136 @@ from io import BytesIO
 from datetime import datetime, timedelta
 import hashlib
 import os
-
-# -------------------------------------------------
-# MIDNIGHT NEON THEME
-# -------------------------------------------------
-neon_css = """
+aurora_css = """
 <style>
 
-/* 🔥 Background */
+/* App background */
 [data-testid="stAppViewContainer"] {
-    background: radial-gradient(circle at top, #0a0f1f 0%, #05070d 60%, #000000);
-    color: #e2e8f0;
+    background: radial-gradient(circle at top left, #020617 0%, #020617 40%, #020617 60%, #020617 100%);
+    background-color: #020617;
+    color: #e5e7eb;
+}
+
+/* Soft gradient band behind content (subtle) */
+section.main {
+    padding-top: 10px;
 }
 
 /* Header transparent */
-[data-testid="stHeader"] { 
-    background: rgba(0,0,0,0);
+[data-testid="stHeader"] {
+    background: rgba(2, 6, 23, 0.9);
 }
 
 /* Sidebar */
 [data-testid="stSidebar"] {
-    background: #06080f;
-    border-right: 1px solid rgba(0,255,255,0.15);
+    background: #020617;
+    border-right: 1px solid rgba(148, 163, 184, 0.2);
 }
 
 /* Typography */
 h1, h2, h3, h4 {
-    font-family: 'Segoe UI', system-ui;
-    letter-spacing: 0.5px;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-/* 🔵 Neon Tabs (top toolbar) */
+/* Tabs (top toolbar) */
 .stTabs [data-baseweb="tab-list"] {
     gap: 0.4rem;
 }
 .stTabs [data-baseweb="tab"] {
-    background: #0d1220;
-    color: #8b9bb7;
+    background: #020617;
+    color: #9ca3af;
     border-radius: 10px 10px 0 0;
-    border: 1px solid #1b2336;
+    border: 1px solid #1f2937;
     padding: 8px 22px;
-    font-weight: 600;
-    transition: 0.2s ease;
+    font-weight: 500;
+    transition: 0.18s ease;
 }
 .stTabs [data-baseweb="tab"]:hover {
-    color: #00eaff;
-    border-color: #00eaff;
+    color: #22d3ee;
+    border-color: #22d3ee;
 }
 .stTabs [aria-selected="true"] {
-    background: linear-gradient(90deg, #00eaff, #7f00ff) !important;
-    color: #ffffff !important;
+    background: linear-gradient(135deg, #22c1c3, #6366f1) !important;
+    color: #f9fafb !important;
     border: none !important;
-    box-shadow: 0 0 12px rgba(0,234,255,0.6);
+    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.9);
+}
+
+/* Main "card" containers */
+section.main > div {
+    background: radial-gradient(circle at top left, rgba(148,163,184,0.08), rgba(15,23,42,0.96));
+    border-radius: 16px;
+    padding: 22px;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.95);
 }
 
 /* Buttons */
 .stButton button {
-    background: linear-gradient(90deg, #00eaff, #7f00ff);
-    color: #000;
-    font-weight: 700;
-    border-radius: 8px;
-    padding: 0.5rem 1.6rem;
+    background: linear-gradient(135deg, #22c1c3, #6366f1);
+    color: #f9fafb;
+    font-weight: 600;
+    border-radius: 999px;
+    padding: 0.45rem 1.7rem;
     border: none;
-    transition: 0.2s;
+    letter-spacing: 0.03em;
+    transition: 0.18s ease;
 }
 .stButton button:hover {
-    filter: brightness(1.15);
-    box-shadow: 0 0 10px rgba(0,234,255,0.6);
+    filter: brightness(1.05);
+    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.45);
 }
 
-/* Content cards */
-section.main > div {
-    background: rgba(255,255,255,0.04);
-    border-radius: 14px;
-    padding: 25px;
-    border: 1px solid rgba(0,234,255,0.12);
-    box-shadow: 0 0 15px rgba(0,234,255,0.05);
-}
-
-/* Inputs */
+/* Inputs & select boxes */
 input, textarea, select {
-    background: #0f1627 !important;
-    color: #e2e8f0 !important;
-    border-radius: 6px !important;
+    background-color: #020617 !important;
+    color: #e5e7eb !important;
+    border-radius: 8px !important;
+    border: 1px solid #1f2937 !important;
+}
+.stTextInput > div > div,
+.stSelectbox > div > div,
+.stTextArea > div > textarea {
+    background-color: #020617 !important;
+}
+
+/* File uploader box */
+.stFileUploader > label > div {
+    background-color: #020617 !important;
+    border-radius: 10px;
+    border: 1px dashed rgba(148, 163, 184, 0.7);
 }
 
 /* Metrics */
-[data-testid="stMetricValue"] { 
-    color: #00eaff; 
-    text-shadow: 0px 0px 10px rgba(0,234,255,0.6);
+[data-testid="stMetricValue"] {
+    color: #e5e7eb;
+    font-weight: 700;
 }
-[data-testid="stMetricLabel"] { 
-    color: #64748b; 
+[data-testid="stMetricLabel"] {
+    color: #9ca3af;
 }
 
-/* Tables */
+/* Dataframe table */
 [data-testid="stTable"] {
-    background: #0d1220;
-    color: #e2e8f0;
-    border-radius: 10px;
-}
-
-/* File uploader */
-.stFileUploader > label > div {
-    background: #0f1627 !important;
-    border: 1px solid rgba(0,234,255,0.4);
+    background-color: #020617;
+    color: #e5e7eb;
+    border-radius: 12px;
 }
 
 /* Footer */
 .footer-text {
     position: fixed;
-    right: 20px;
-    bottom: 10px;
-    color: #00eaff;
-    opacity: 0.85;
-    font-size: 14px;
-    text-shadow: 0 0 8px rgba(0,234,255,0.6);
+    right: 18px;
+    bottom: 8px;
+    color: #9ca3af;
+    font-size: 13px;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    opacity: 0.9;
 }
 
 </style>
 """
-st.markdown(neon_css, unsafe_allow_html=True)
-
+st.markdown(aurora_css, unsafe_allow_html=True)
 
 st.title("📄 BOI Filing Multi-State Processor")
 
