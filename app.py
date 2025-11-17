@@ -682,3 +682,24 @@ with tab_process:
 
 with tab_combine:
     combiner_page()
+    # ---------------------------
+# FOOTER
+# ---------------------------
+footer_css = """
+<style>
+.footer-text {
+    position: fixed;
+    bottom: 10px;
+    right: 20px;
+    color: #9ca3af;
+    font-size: 14px;
+    font-family: 'Segoe UI', sans-serif;
+}
+</style>
+<div class="footer-text">
+    Created by Hussain — the pro coder
+</div>
+"""
+"""
+st.markdown(footer_css, unsafe_allow_html=True)
+
