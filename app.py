@@ -77,7 +77,7 @@ h1, h2, h3, h4 {
 """
 st.markdown(custom_css, unsafe_allow_html=True)
 
-st.title("📄 BOI Filing Multi-State Processor")
+st.title("📄 Business Filing Data Processor")
 
 # ==========================
 # AUTH CONFIG
