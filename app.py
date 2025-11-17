@@ -7,44 +7,32 @@ import hashlib
 import os
 
 # -------------------------------------------------
-# PAGE CONFIG & THEME
+# PAGE CONFIG & ROYAL GRADIENT THEME
 # -------------------------------------------------
 st.set_page_config(page_title="BOI Filing Tool", layout="wide")
 
-# Custom dark theme + unique tab/button styling
-custom_css = """
+theme_css = """
 <style>
-/* Main background */
+/* App background */
 [data-testid="stAppViewContainer"] {
-    background: radial-gradient(circle at top left, #111827, #020617);
-    color: #e5e7eb;
+    background: linear-gradient(135deg, #1e1443, #4d4cdb);
+    color: #f3f3f3;
 }
 
-/* Remove default header background */
+/* Header background transparent */
 [data-testid="stHeader"] {
     background: transparent;
 }
 
-/* Sidebar color */
+/* Sidebar */
 [data-testid="stSidebar"] {
-    background-color: #020617;
+    background: rgba(10, 10, 35, 0.95);
+    color: #e5e7eb;
 }
 
-/* Title font tweak */
+/* General typography */
 h1, h2, h3, h4 {
     font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-}
-
-/* Buttons */
-.stButton button {
-    background: linear-gradient(90deg, #6366f1, #ec4899);
-    color: white;
-    border-radius: 999px;
-    border: none;
-    padding: 0.35rem 1.4rem;
-}
-.stButton button:hover {
-    filter: brightness(1.08);
 }
 
 /* Tabs (toolbar) */
@@ -52,32 +40,78 @@ h1, h2, h3, h4 {
     gap: 0.35rem;
 }
 .stTabs [data-baseweb="tab"] {
-    background-color: #020617;
-    color: #e5e7eb;
-    border-radius: 999px 999px 0 0;
-    padding-top: 0.5rem;
-    padding-bottom: 0.5rem;
+    background: rgba(255,255,255,0.08);
+    border-radius: 10px 10px 0 0;
+    padding: 8px 20px;
+    color: #d1cfe2;
+    border: 1px solid rgba(255,255,255,0.1);
     font-weight: 500;
-    border: 1px solid #1f2933;
 }
 .stTabs [aria-selected="true"] {
-    background-color: #4f46e5 !important;
-    color: white !important;
-    border-color: #6366f1 !important;
+    background: #f0d887 !important;
+    color: #1e1443 !important;
+    border-color: #f0d887 !important;
 }
 
-/* Metrics cards text */
+/* Buttons */
+.stButton button {
+    background: linear-gradient(90deg, #f0d887, #f9e7b8);
+    color: #1e1443;
+    border-radius: 999px;
+    padding: 0.45rem 1.6rem;
+    font-weight: 700;
+    border: none;
+}
+.stButton button:hover {
+    filter: brightness(1.08);
+}
+
+/* Main content “cards” */
+section.main > div {
+    background: rgba(255,255,255,0.06);
+    border-radius: 14px;
+    padding: 20px;
+    border: 1px solid rgba(255,255,255,0.15);
+}
+
+/* Metrics */
 [data-testid="stMetricValue"] {
-    color: #e5e7eb;
+    color: #fffbea;
+    font-weight: 700;
 }
 [data-testid="stMetricLabel"] {
-    color: #9ca3af;
+    color: #d1d5db;
+}
+
+/* Dataframe text */
+[data-testid="stTable"] {
+    color: #111827;
+}
+
+/* Inputs background */
+.stTextInput > div > div > input,
+.stTextArea textarea,
+.stSelectbox > div > div,
+.stFileUploader label div {
+    background-color: rgba(15,23,42,0.65) !important;
+    color: #f9fafb !important;
+}
+
+/* Footer */
+.footer-text {
+    position: fixed;
+    bottom: 8px;
+    right: 18px;
+    color: #f9fafb;
+    font-size: 13px;
+    font-family: "Segoe UI", system-ui, sans-serif;
+    opacity: 0.9;
 }
 </style>
 """
-st.markdown(custom_css, unsafe_allow_html=True)
+st.markdown(theme_css, unsafe_allow_html=True)
 
-st.title("📄 Business Filing Data Processor")
+st.title("📄 BOI Filing Multi-State Processor")
 
 # ==========================
 # AUTH CONFIG
@@ -209,8 +243,6 @@ def logout():
 
 def select_rows(df: pd.DataFrame, choice: str) -> pd.DataFrame:
     """
-    Parse user row selection string and return subset of df.
-
     Supported:
       - ALL
       - first 100
@@ -256,8 +288,8 @@ def select_rows(df: pd.DataFrame, choice: str) -> pd.DataFrame:
 # =====================================================
 
 def process_florida(file_bytes: bytes, exact_date_str: str, mailing_only: bool) -> pd.DataFrame:
-    """Process Florida TXT and return a DataFrame.
-       If mailing_only=True, output is in standard format:
+    """Process Florida TXT.
+       If mailing_only=True → standard format:
        Name | Address | City | State | Zipcode | Filing Date | Document Number
     """
 
@@ -500,7 +532,7 @@ def process_wv_streamlit(file) -> pd.DataFrame:
 def combiner_page():
     st.header("🔗 Combine Files")
 
-    st.write("All input files must be in this exact format:")
+    st.write("All input files must be in this format:")
     st.code("Name | Address | City | State | Zipcode | Filing Date | Document Number", language="text")
 
     uploaded_files = st.file_uploader(
@@ -544,7 +576,7 @@ def combiner_page():
                 continue
 
             file.seek(0)
-            df = pd.read_excel(file, engine="openpyxl")
+            df = pd.read_excel(file, engine="openxml")
             choice = selections.get(file.name, "ALL")
             df_sel = select_rows(df, choice)
             all_frames.append(df_sel)
@@ -631,7 +663,7 @@ def state_page():
 
 
 # =====================================================
-# MAIN APP WITH AUTH + TOP TABS
+# MAIN APP WITH AUTH + TABS
 # =====================================================
 
 if "auth" not in st.session_state:
@@ -653,7 +685,6 @@ if st.sidebar.button("Logout"):
     logout()
     st.stop()
 
-# Top toolbar tabs
 tab_home, tab_process, tab_combine = st.tabs(
     ["🏠 Home", "🏛 Process State Files", "🔗 Combine Files"]
 )
@@ -682,26 +713,13 @@ with tab_process:
 
 with tab_combine:
     combiner_page()
-    # ---------------------------
+
+# -------------------------------------------------
 # FOOTER
-# ---------------------------
-footer_css = """
-<style>
-.footer-text {
-    position: fixed;
-    bottom: 10px;
-    right: 20px;
-    color: #9ca3af;
-    font-size: 14px;
-    font-family: 'Segoe UI', sans-serif;
-    z-index: 9999;
-}
-</style>
+# -------------------------------------------------
+footer_html = """
 <div class="footer-text">
     Created by Hussain — the pro coder
 </div>
 """
-
-st.markdown(footer_css, unsafe_allow_html=True)
-
-
+st.markdown(footer_html, unsafe_allow_html=True)
