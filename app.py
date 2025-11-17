@@ -7,109 +7,126 @@ import hashlib
 import os
 
 # -------------------------------------------------
-# PAGE CONFIG & ROYAL GRADIENT THEME
+# MIDNIGHT NEON THEME
 # -------------------------------------------------
-st.set_page_config(page_title="BOI Filing Tool", layout="wide")
-
-theme_css = """
+neon_css = """
 <style>
-/* App background */
+
+/* 🔥 Background */
 [data-testid="stAppViewContainer"] {
-    background: linear-gradient(135deg, #1e1443, #4d4cdb);
-    color: #f3f3f3;
+    background: radial-gradient(circle at top, #0a0f1f 0%, #05070d 60%, #000000);
+    color: #e2e8f0;
 }
 
-/* Header background transparent */
-[data-testid="stHeader"] {
-    background: transparent;
+/* Header transparent */
+[data-testid="stHeader"] { 
+    background: rgba(0,0,0,0);
 }
 
 /* Sidebar */
 [data-testid="stSidebar"] {
-    background: rgba(10, 10, 35, 0.95);
-    color: #e5e7eb;
+    background: #06080f;
+    border-right: 1px solid rgba(0,255,255,0.15);
 }
 
-/* General typography */
+/* Typography */
 h1, h2, h3, h4 {
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-family: 'Segoe UI', system-ui;
+    letter-spacing: 0.5px;
 }
 
-/* Tabs (toolbar) */
+/* 🔵 Neon Tabs (top toolbar) */
 .stTabs [data-baseweb="tab-list"] {
-    gap: 0.35rem;
+    gap: 0.4rem;
 }
 .stTabs [data-baseweb="tab"] {
-    background: rgba(255,255,255,0.08);
+    background: #0d1220;
+    color: #8b9bb7;
     border-radius: 10px 10px 0 0;
-    padding: 8px 20px;
-    color: #d1cfe2;
-    border: 1px solid rgba(255,255,255,0.1);
-    font-weight: 500;
+    border: 1px solid #1b2336;
+    padding: 8px 22px;
+    font-weight: 600;
+    transition: 0.2s ease;
+}
+.stTabs [data-baseweb="tab"]:hover {
+    color: #00eaff;
+    border-color: #00eaff;
 }
 .stTabs [aria-selected="true"] {
-    background: #f0d887 !important;
-    color: #1e1443 !important;
-    border-color: #f0d887 !important;
+    background: linear-gradient(90deg, #00eaff, #7f00ff) !important;
+    color: #ffffff !important;
+    border: none !important;
+    box-shadow: 0 0 12px rgba(0,234,255,0.6);
 }
 
 /* Buttons */
 .stButton button {
-    background: linear-gradient(90deg, #f0d887, #f9e7b8);
-    color: #1e1443;
-    border-radius: 999px;
-    padding: 0.45rem 1.6rem;
+    background: linear-gradient(90deg, #00eaff, #7f00ff);
+    color: #000;
     font-weight: 700;
+    border-radius: 8px;
+    padding: 0.5rem 1.6rem;
     border: none;
+    transition: 0.2s;
 }
 .stButton button:hover {
-    filter: brightness(1.08);
+    filter: brightness(1.15);
+    box-shadow: 0 0 10px rgba(0,234,255,0.6);
 }
 
-/* Main content “cards” */
+/* Content cards */
 section.main > div {
-    background: rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.04);
     border-radius: 14px;
-    padding: 20px;
-    border: 1px solid rgba(255,255,255,0.15);
+    padding: 25px;
+    border: 1px solid rgba(0,234,255,0.12);
+    box-shadow: 0 0 15px rgba(0,234,255,0.05);
+}
+
+/* Inputs */
+input, textarea, select {
+    background: #0f1627 !important;
+    color: #e2e8f0 !important;
+    border-radius: 6px !important;
 }
 
 /* Metrics */
-[data-testid="stMetricValue"] {
-    color: #fffbea;
-    font-weight: 700;
+[data-testid="stMetricValue"] { 
+    color: #00eaff; 
+    text-shadow: 0px 0px 10px rgba(0,234,255,0.6);
 }
-[data-testid="stMetricLabel"] {
-    color: #d1d5db;
+[data-testid="stMetricLabel"] { 
+    color: #64748b; 
 }
 
-/* Dataframe text */
+/* Tables */
 [data-testid="stTable"] {
-    color: #111827;
+    background: #0d1220;
+    color: #e2e8f0;
+    border-radius: 10px;
 }
 
-/* Inputs background */
-.stTextInput > div > div > input,
-.stTextArea textarea,
-.stSelectbox > div > div,
-.stFileUploader label div {
-    background-color: rgba(15,23,42,0.65) !important;
-    color: #f9fafb !important;
+/* File uploader */
+.stFileUploader > label > div {
+    background: #0f1627 !important;
+    border: 1px solid rgba(0,234,255,0.4);
 }
 
 /* Footer */
 .footer-text {
     position: fixed;
-    bottom: 8px;
-    right: 18px;
-    color: #f9fafb;
-    font-size: 13px;
-    font-family: "Segoe UI", system-ui, sans-serif;
-    opacity: 0.9;
+    right: 20px;
+    bottom: 10px;
+    color: #00eaff;
+    opacity: 0.85;
+    font-size: 14px;
+    text-shadow: 0 0 8px rgba(0,234,255,0.6);
 }
+
 </style>
 """
-st.markdown(theme_css, unsafe_allow_html=True)
+st.markdown(neon_css, unsafe_allow_html=True)
+
 
 st.title("📄 BOI Filing Multi-State Processor")
 
