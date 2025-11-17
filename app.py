@@ -694,12 +694,14 @@ footer_css = """
     color: #9ca3af;
     font-size: 14px;
     font-family: 'Segoe UI', sans-serif;
+    z-index: 9999;
 }
 </style>
 <div class="footer-text">
     Created by Hussain — the pro coder
 </div>
 """
-"""
+
 st.markdown(footer_css, unsafe_allow_html=True)
+
 
