@@ -193,7 +193,6 @@ input, textarea, select {
 </style>
 """
 
-def apply_theme():
     if st.session_state["theme"] == "Light":
         st.markdown(LIGHT_THEME_CSS, unsafe_allow_html=True)
     else:
