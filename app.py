@@ -5,6 +5,18 @@ from io import BytesIO
 from datetime import datetime, timedelta
 import hashlib
 import os
+
+# -------------------------------------------------
+# PAGE CONFIG
+# -------------------------------------------------
+st.set_page_config(page_title="BOI Filing Tool", layout="wide")
+
+# ------------------------------
+# THEME STATE (Light / Dark)
+# ------------------------------
+if "theme" not in st.session_state:
+    st.session_state["theme"] = "Light"   # default theme
+
 # ------------------------------
 # LIGHT THEME (Raptor-style)
 # ------------------------------
@@ -27,6 +39,11 @@ LIGHT_THEME_CSS = """
     border-right: 1px solid #e5e7eb;
 }
 
+/* Typography */
+h1, h2, h3, h4 {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
 /* Tabs */
 .stTabs [data-baseweb="tab-list"] { gap: 0.35rem; }
 .stTabs [data-baseweb="tab"] {
@@ -40,10 +57,10 @@ LIGHT_THEME_CSS = """
 .stTabs [aria-selected="true"] {
     background: linear-gradient(135deg, #6366f1, #ec4899) !important;
     color: #ffffff !important;
-    border: none !important;
+    border: none !Important;
 }
 
-/* Cards */
+/* Main cards */
 section.main > div {
     background: #ffffff;
     border-radius: 18px;
@@ -72,6 +89,11 @@ input, textarea, select {
     border-radius: 8px !important;
     border: 1px solid #e5e7eb !important;
 }
+.stTextInput > div > div,
+.stSelectbox > div > div,
+.stTextArea > div > textarea {
+    background: #f9fafb !important;
+}
 
 /* File uploader */
 .stFileUploader > label > div {
@@ -83,6 +105,13 @@ input, textarea, select {
 /* Metrics */
 [data-testid="stMetricValue"] { color: #0f172a; }
 [data-testid="stMetricLabel"] { color: #6b7280; }
+
+/* Table */
+[data-testid="stTable"] {
+    background: #ffffff;
+    color: #0f172a;
+    border-radius: 10px;
+}
 
 /* Footer */
 .footer-text {
@@ -111,6 +140,11 @@ DARK_THEME_CSS = """
     border-right: 1px solid rgba(148,163,184,0.25);
 }
 
+/* Typography */
+h1, h2, h3, h4 {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
 /* Tabs */
 .stTabs [data-baseweb="tab-list"] { gap: 0.4rem; }
 .stTabs [data-baseweb="tab"] {
@@ -127,7 +161,7 @@ DARK_THEME_CSS = """
     border: none !important;
 }
 
-/* Cards */
+/* Main cards */
 section.main > div {
     background: radial-gradient(circle at top left, rgba(148,163,184,0.16), rgba(15,23,42,0.98));
     border-radius: 16px;
@@ -193,30 +227,25 @@ input, textarea, select {
 </style>
 """
 
+def apply_theme():
     if st.session_state["theme"] == "Light":
         st.markdown(LIGHT_THEME_CSS, unsafe_allow_html=True)
     else:
         st.markdown(DARK_THEME_CSS, unsafe_allow_html=True)
+
+# Apply theme before building UI
 apply_theme()
-st.sidebar.markdown(f"**Logged in as:** {st.session_state['user']}")
 
-theme_choice = st.sidebar.radio(
-    "Theme",
-    ["Light", "Dark"],
-    index=0 if st.session_state["theme"] == "Light" else 1,
-)
-
-# update theme in session state
-st.session_state["theme"] = theme_choice
-
-
+# -------------------------------------------------
+# APP TITLE
+# -------------------------------------------------
 st.title("📄 BOI Filing Multi-State Processor")
 
 # ==========================
 # AUTH CONFIG
 # ==========================
 USERS_DB_FILE = "users_db.csv"
-PROTECTED_KEY = "BOI2025VIP"  # <<< change this to your secret signup key
+PROTECTED_KEY = "BOI2025VIP"  # change this to your secret signup key
 
 
 # ==========================
@@ -675,7 +704,7 @@ def combiner_page():
                 continue
 
             file.seek(0)
-            df = pd.read_excel(file, engine="openxml")
+            df = pd.read_excel(file, engine="openpyxl")
             choice = selections.get(file.name, "ALL")
             df_sel = select_rows(df, choice)
             all_frames.append(df_sel)
@@ -762,7 +791,7 @@ def state_page():
 
 
 # =====================================================
-# MAIN APP WITH AUTH + TABS
+# MAIN APP WITH AUTH + TABS + THEME SWITCH
 # =====================================================
 
 if "auth" not in st.session_state:
@@ -770,6 +799,7 @@ if "auth" not in st.session_state:
 if "user" not in st.session_state:
     st.session_state["user"] = None
 
+# Not logged in → show auth in sidebar and stop
 if not st.session_state["auth"]:
     choice = st.sidebar.radio("Authentication", ["Login", "Sign Up"])
     if choice == "Login":
@@ -780,10 +810,21 @@ if not st.session_state["auth"]:
 
 # Logged-in view
 st.sidebar.markdown(f"**Logged in as:** {st.session_state['user']}")
+
+# Theme toggle
+theme_choice = st.sidebar.radio(
+    "Theme",
+    ["Light", "Dark"],
+    index=0 if st.session_state["theme"] == "Light" else 1,
+)
+st.session_state["theme"] = theme_choice  # update theme
+apply_theme()  # re-apply in case user toggled
+
 if st.sidebar.button("Logout"):
     logout()
     st.stop()
 
+# Top tabs
 tab_home, tab_process, tab_combine = st.tabs(
     ["🏠 Home", "🏛 Process State Files", "🔗 Combine Files"]
 )
@@ -794,8 +835,8 @@ with tab_home:
         """
         Welcome to the **BOI Filing Multi-State Processor**.
 
-        - Use **Process State Files** to clean and format data for each state  
-        - Use **Combine Files** to merge all processed files into one master sheet  
+        1. Use **Process State Files** to clean and format data for each state  
+        2. Use **Combine Files** to merge all processed files into one master sheet  
         """
     )
 
@@ -812,6 +853,10 @@ with tab_process:
 
 with tab_combine:
     combiner_page()
+
+# -------------------------------------------------
+# FOOTER
+# -------------------------------------------------
 st.markdown(
     '<div class="footer-text">Created by Hussain — the pro coder</div>',
     unsafe_allow_html=True
