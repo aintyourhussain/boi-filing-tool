@@ -2,13 +2,209 @@ import streamlit as st
 import pandas as pd
 import re
 from io import BytesIO
+from datetime import datetime, timedelta
+import hashlib
+import os
 
+# -------------------------------------------------
+# PAGE CONFIG & THEME
+# -------------------------------------------------
 st.set_page_config(page_title="BOI Filing Tool", layout="wide")
+
+# Custom dark theme + unique tab/button styling
+custom_css = """
+<style>
+/* Main background */
+[data-testid="stAppViewContainer"] {
+    background: radial-gradient(circle at top left, #111827, #020617);
+    color: #e5e7eb;
+}
+
+/* Remove default header background */
+[data-testid="stHeader"] {
+    background: transparent;
+}
+
+/* Sidebar color */
+[data-testid="stSidebar"] {
+    background-color: #020617;
+}
+
+/* Title font tweak */
+h1, h2, h3, h4 {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+/* Buttons */
+.stButton button {
+    background: linear-gradient(90deg, #6366f1, #ec4899);
+    color: white;
+    border-radius: 999px;
+    border: none;
+    padding: 0.35rem 1.4rem;
+}
+.stButton button:hover {
+    filter: brightness(1.08);
+}
+
+/* Tabs (toolbar) */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 0.35rem;
+}
+.stTabs [data-baseweb="tab"] {
+    background-color: #020617;
+    color: #e5e7eb;
+    border-radius: 999px 999px 0 0;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    font-weight: 500;
+    border: 1px solid #1f2933;
+}
+.stTabs [aria-selected="true"] {
+    background-color: #4f46e5 !important;
+    color: white !important;
+    border-color: #6366f1 !important;
+}
+
+/* Metrics cards text */
+[data-testid="stMetricValue"] {
+    color: #e5e7eb;
+}
+[data-testid="stMetricLabel"] {
+    color: #9ca3af;
+}
+</style>
+"""
+st.markdown(custom_css, unsafe_allow_html=True)
+
 st.title("📄 BOI Filing Multi-State Processor")
+
+# ==========================
+# AUTH CONFIG
+# ==========================
+USERS_DB_FILE = "users_db.csv"
+PROTECTED_KEY = "BOI2025VIP"  # <<< change this to your secret signup key
+
+
+# ==========================
+# AUTH HELPERS
+# ==========================
+
+def hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode("utf-8")).hexdigest()
+
+
+def load_users():
+    if not os.path.exists(USERS_DB_FILE):
+        return pd.DataFrame(columns=["username", "password_hash", "expiry"])
+    df = pd.read_csv(USERS_DB_FILE)
+    for col in ["username", "password_hash", "expiry"]:
+        if col not in df.columns:
+            df[col] = ""
+    return df
+
+
+def save_users(df: pd.DataFrame):
+    df.to_csv(USERS_DB_FILE, index=False)
+
+
+def create_user(username: str, password: str):
+    df = load_users()
+    if (df["username"] == username).any():
+        return False, "User already exists."
+
+    pwd_hash = hash_password(password)
+    expiry_date = (datetime.utcnow() + timedelta(days=30)).date().isoformat()
+
+    new_row = pd.DataFrame([{
+        "username": username,
+        "password_hash": pwd_hash,
+        "expiry": expiry_date
+    }])
+
+    df = pd.concat([df, new_row], ignore_index=True)
+    save_users(df)
+    return True, f"Account created. Valid until {expiry_date}"
+
+
+def check_login(username: str, password: str):
+    df = load_users()
+    row = df[df["username"] == username]
+    if row.empty:
+        return False, "User not found."
+
+    pwd_hash = hash_password(password)
+    if row.iloc[0]["password_hash"] != pwd_hash:
+        return False, "Incorrect password."
+
+    expiry_str = str(row.iloc[0]["expiry"])
+    try:
+        expiry = datetime.strptime(expiry_str, "%Y-%m-%d").date()
+    except Exception:
+        return False, "Invalid expiry data. Contact admin."
+
+    if expiry < datetime.utcnow().date():
+        return False, f"Account expired on {expiry_str}."
+
+    return True, f"Welcome back! Account valid until {expiry_str}."
+
+
+def signup_page():
+    st.subheader("🔑 Sign Up")
+
+    username = st.text_input("Email / Username")
+    password = st.text_input("Password", type="password")
+    confirm = st.text_input("Confirm Password", type="password")
+    key = st.text_input("Protected Key", type="password", help="Ask admin for signup key")
+
+    if st.button("Create Account"):
+        if not username or not password or not confirm or not key:
+            st.error("All fields are required.")
+            return
+
+        if password != confirm:
+            st.error("Passwords do not match.")
+            return
+
+        if key != PROTECTED_KEY:
+            st.error("Invalid Protected Key.")
+            return
+
+        ok, msg = create_user(username, password)
+        if ok:
+            st.success(msg)
+        else:
+            st.error(msg)
+
+
+def login_page():
+    st.subheader("🔐 Login")
+
+    username = st.text_input("Email / Username", key="login_user")
+    password = st.text_input("Password", type="password", key="login_pass")
+
+    if st.button("Login"):
+        if not username or not password:
+            st.error("Please enter both username and password.")
+            return
+
+        ok, msg = check_login(username, password)
+        if ok:
+            st.success(msg)
+            st.session_state["auth"] = True
+            st.session_state["user"] = username
+        else:
+            st.error(msg)
+
+
+def logout():
+    st.session_state["auth"] = False
+    st.session_state["user"] = None
+    st.success("Logged out.")
 
 
 # =====================================================
-# Helper: Row selection for combiner (matches your logic)
+# Helper: Row selection for combiner
 # =====================================================
 
 def select_rows(df: pd.DataFrame, choice: str) -> pd.DataFrame:
@@ -26,11 +222,9 @@ def select_rows(df: pd.DataFrame, choice: str) -> pd.DataFrame:
 
     choice = choice.strip().lower()
 
-    # take all rows
     if choice == "all":
         return df
 
-    # first N
     if choice.startswith("first"):
         try:
             n = int(choice.split()[1])
@@ -38,7 +232,6 @@ def select_rows(df: pd.DataFrame, choice: str) -> pd.DataFrame:
         except Exception:
             return df
 
-    # last N
     if choice.startswith("last"):
         try:
             n = int(choice.split()[1])
@@ -46,23 +239,20 @@ def select_rows(df: pd.DataFrame, choice: str) -> pd.DataFrame:
         except Exception:
             return df
 
-    # range x-y
     if "-" in choice:
         try:
             start, end = choice.split("-")
             start = int(start)
             end = int(end)
-            # user uses 1-based indexing
             return df.iloc[start - 1:end]
         except Exception:
             return df
 
-    # unknown input → use ALL
     return df
 
 
 # =====================================================
-# FLORIDA backend (your logic, adapted to Streamlit)
+# FLORIDA backend
 # =====================================================
 
 def process_florida(file_bytes: bytes, exact_date_str: str, mailing_only: bool) -> pd.DataFrame:
@@ -113,10 +303,8 @@ def process_florida(file_bytes: bytes, exact_date_str: str, mailing_only: bool) 
 
     text = file_bytes.decode("utf-8", errors="ignore")
     rows = []
-    lines_read = 0
 
     for raw in text.splitlines():
-        lines_read += 1
         line = raw.replace("\x00", " ").rstrip("\n\r")
         if not line.strip():
             continue
@@ -148,7 +336,6 @@ def process_florida(file_bytes: bytes, exact_date_str: str, mailing_only: bool) 
         "Mailing Street", "Mailing City", "Mailing State", "Mailing ZIP"
     ])
 
-    # exact date filter
     df["Filing Date Parsed"] = pd.to_datetime(df["Filing Date"], format="%m/%d/%Y", errors="coerce")
 
     if exact_date_str:
@@ -160,7 +347,6 @@ def process_florida(file_bytes: bytes, exact_date_str: str, mailing_only: bool) 
 
     df = df.drop(columns=["Filing Date Parsed"], errors="ignore")
 
-    # mode: mailing-only vs principal+mailing
     if mailing_only:
         mailing_df = df[[
             "Business Name",
@@ -196,27 +382,18 @@ def process_florida(file_bytes: bytes, exact_date_str: str, mailing_only: bool) 
 
 
 # =====================================================
-# WASHINGTON backend (your logic, adapted to Streamlit)
+# WASHINGTON backend
 # =====================================================
 
 def process_washington_streamlit(file, added_date: str) -> pd.DataFrame:
     """
-    Washington processor for Streamlit.
-
-    Input:
-      - file: uploaded CSV file
-      - added_date: string like 'MM/DD/YYYY' to add in Filing Date column
-
-    Output:
-      - DataFrame in standard format:
-        Name | Address | City | State | Zipcode | Filing Date | Document Number
+    Washington CSV → standard format:
+    Name | Address | City | State | Zipcode | Filing Date | Document Number
     """
 
     def split_address(addr: str):
-        """Split address into Address | City | State | Zipcode."""
         if pd.isna(addr):
             return pd.Series(["", "", "", ""])
-
         addr_str = str(addr).strip()
         parts = [p.strip() for p in addr_str.split(",") if p.strip()]
 
@@ -232,24 +409,19 @@ def process_washington_streamlit(file, added_date: str) -> pd.DataFrame:
 
     data = pd.read_csv(file)
     data.columns = data.columns.str.strip()
-
-    # add Filing Date (same for all)
     data["Filing Date"] = added_date
 
-    # apply WA filters
     filtered = data[
         (data["Status"] == "Active") &
         (data["Principal Office Address"].notna()) &
         (data["Business Type"].str.strip().str.upper() == "WA LIMITED LIABILITY COMPANY")
     ].copy()
 
-    # split address
     addr_df = filtered["Principal Office Address"].apply(split_address)
     addr_df.columns = ["Address", "City", "State", "Zipcode"]
 
     filtered = pd.concat([filtered, addr_df], axis=1)
 
-    # drop unwanted cols
     drop_cols = [
         "Nonprofit EIN", "Status",
         "Registered Agent Name", "Business Type",
@@ -264,7 +436,7 @@ def process_washington_streamlit(file, added_date: str) -> pd.DataFrame:
     final["State"] = filtered["State"].astype(str).str.strip()
     final["Zipcode"] = filtered["Zipcode"].astype(str).str.strip()
     final["Filing Date"] = filtered["Filing Date"].astype(str).str.strip()
-    final["Document Number"] = filtered["UBI#"].astype(str).str.strip()  # uses UBI#
+    final["Document Number"] = filtered["UBI#"].astype(str).str.strip()
 
     final = final.replace(r"^\s*$", pd.NA, regex=True)
     final = final.dropna(how="any")
@@ -273,7 +445,7 @@ def process_washington_streamlit(file, added_date: str) -> pd.DataFrame:
 
 
 # =====================================================
-# WEST VIRGINIA backend (CSV → standard format)
+# WEST VIRGINIA backend
 # =====================================================
 
 def process_wv_streamlit(file) -> pd.DataFrame:
@@ -285,20 +457,16 @@ def process_wv_streamlit(file) -> pd.DataFrame:
     df = pd.read_csv(file)
     df.columns = df.columns.str.strip()
 
-    # Filing Date from Effective Date
     df["Filing Date"] = pd.to_datetime(
         df["Effective Date"], errors="coerce"
     ).dt.strftime("%m/%d/%Y")
 
-    # Address from Street1 + Street2
     street1 = df["Street1"].fillna("").astype(str).str.strip()
     street2 = df["Street2"].fillna("").astype(str).str.strip()
     address = street1.where(street2 == "", street1 + ", " + street2)
 
-    # Zipcode clean to 5 digits
     zip5 = df["ZipCode"].astype(str).str.extract(r"(\d{5})", expand=False)
 
-    # Filters: active (no Termination Date), and required fields present
     mask = (
         df["Organization Name"].notna() &
         df["Street1"].notna() &
@@ -326,11 +494,11 @@ def process_wv_streamlit(file) -> pd.DataFrame:
 
 
 # =====================================================
-# Combiner page (Streamlit version of your ALL file Combiner)
+# Combiner page
 # =====================================================
 
 def combiner_page():
-    st.header("📌 Combine Processed State Files")
+    st.header("🔗 Combine Files")
 
     st.write("All input files must be in this exact format:")
     st.code("Name | Address | City | State | Zipcode | Filing Date | Document Number", language="text")
@@ -344,14 +512,12 @@ def combiner_page():
     if not uploaded_files:
         return
 
-    st.write("For each file, specify how many rows you want (e.g. ALL, first 100, last 50, 34-134).")
+    st.write("For each file, specify how many rows you want (ALL, first 100, last 50, 34-134, etc.)")
 
     required_cols = ["Name", "Address", "City", "State", "Zipcode", "Filing Date", "Document Number"]
     selections = {}
-
     valid_files = []
 
-    # config inputs
     for i, file in enumerate(uploaded_files):
         with st.expander(f"{file.name}"):
             file.seek(0)
@@ -368,14 +534,14 @@ def combiner_page():
                     value="ALL",
                     key=key
                 )
-                valid_files.append(file.name)  # mark as valid
+                valid_files.append(file.name)
 
     if st.button("🔗 Combine Selected Rows"):
         all_frames = []
 
-        for i, file in enumerate(uploaded_files):
+        for file in uploaded_files:
             if file.name not in valid_files:
-                continue  # skip invalid
+                continue
 
             file.seek(0)
             df = pd.read_excel(file, engine="openpyxl")
@@ -465,26 +631,54 @@ def state_page():
 
 
 # =====================================================
-# Main navigation
+# MAIN APP WITH AUTH + TOP TABS
 # =====================================================
 
-page = st.sidebar.radio("Navigate", ["Home", "Process State Files", "Combine Files"])
+if "auth" not in st.session_state:
+    st.session_state["auth"] = False
+if "user" not in st.session_state:
+    st.session_state["user"] = None
 
-if page == "Home":
-    st.subheader("Welcome 👋")
+if not st.session_state["auth"]:
+    choice = st.sidebar.radio("Authentication", ["Login", "Sign Up"])
+    if choice == "Login":
+        login_page()
+    else:
+        signup_page()
+    st.stop()
+
+# Logged-in view
+st.sidebar.markdown(f"**Logged in as:** {st.session_state['user']}")
+if st.sidebar.button("Logout"):
+    logout()
+    st.stop()
+
+# Top toolbar tabs
+tab_home, tab_process, tab_combine = st.tabs(
+    ["🏠 Home", "🏛 Process State Files", "🔗 Combine Files"]
+)
+
+with tab_home:
+    st.subheader("Dashboard")
     st.markdown(
         """
-        This app helps you process **state-level business filing data** and convert it into a
-        unified format for BOI letters.
+        Welcome to the **BOI Filing Multi-State Processor**.
 
-        1. Use **Process State Files** to generate per-state Excel files  
-        2. Then go to **Combine Files** to merge them into a single master file  
+        - Use **Process State Files** to clean and format data for each state  
+        - Use **Combine Files** to merge all processed files into one master sheet  
         """
     )
 
-elif page == "Process State Files":
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("States Supported", "3", help="Florida, Washington, West Virginia")
+    with col2:
+        st.metric("Standard Columns", "7", help="Name, Address, City, State, Zip, Filing Date, Doc #")
+    with col3:
+        st.metric("Account Validity", "30 days", help="Per signup with protected key")
+
+with tab_process:
     state_page()
 
-else:
+with tab_combine:
     combiner_page()
-
